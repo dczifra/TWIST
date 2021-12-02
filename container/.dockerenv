@@ -1,0 +1,2 @@
+IMAGE_NAME=doma945/twist
+REPO_NAME=ssl  # This affect the folder structure created by docker_run.sh script

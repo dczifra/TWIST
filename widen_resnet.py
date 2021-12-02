@@ -158,7 +158,8 @@ class ResNet(nn.Module):
         widen: int = 1,
         width_per_group: int = 64,
         replace_stride_with_dilation: Optional[List[bool]] = None,
-        norm_layer: Optional[Callable[..., nn.Module]] = None
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
+        conv1_size=7,
     ) -> None:
         super(ResNet, self).__init__()
         if norm_layer is None:
@@ -178,7 +179,7 @@ class ResNet(nn.Module):
         self.base_width = width_per_group
 
         num_out_filters = width_per_group * widen
-        self.conv1 = nn.Conv2d(3, num_out_filters, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(3, num_out_filters, kernel_size=conv1_size, stride=2, padding=3,
                                bias=False)
         self.bn1 = norm_layer(num_out_filters)
         self.relu = nn.ReLU(inplace=True)
