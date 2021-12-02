@@ -11,5 +11,5 @@ python3 -m torch.distributed.run --nproc_per_node=1 train.py \
   --backbone resnet18 \
   --min1 0.75 --max1 1.0 \
   --min2 0.3 --max2 0.74 \
-  --lr 3.0 \
+  --lr 0.5 \
   --lam2 0.0

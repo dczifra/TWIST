@@ -204,6 +204,8 @@ def train_one_epoch(args, model, criterion, data_loader, optimizer, device, epoc
 
 @torch.no_grad()
 def eval_knn(args, model, data_loader_val, device, epoch, num_tasks, global_rank):
+    is_encoder_training = model.training
+    model.eval()
     # === Create embedding of test data ===
     test_embs = []
     test_labels = []
@@ -223,7 +225,7 @@ def eval_knn(args, model, data_loader_val, device, epoch, num_tasks, global_rank
     num_classes = 10 if (args.dataset == "cifar10") else 1000
 
     data_loader_train = get_train_with_val_augmentation(args, num_tasks, global_rank)
-    return evaluate_embeddings(
+    result = evaluate_embeddings(
         device,
         data_loader_train,
         model,
@@ -233,6 +235,8 @@ def eval_knn(args, model, data_loader_val, device, epoch, num_tasks, global_rank
         num_classes = num_classes,
         temp=args.tau
     )
+    model.train(is_encoder_training)
+    return result
 
     
 
