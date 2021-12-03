@@ -164,7 +164,9 @@ class ResNet(nn.Module):
         if is_cifar10:
             self.use_maxpool = False
             print("WARNING: use_maxpool overrided to False due to cifar10")
-
+        else:
+            self.use_maxpool = True
+        
         k = 3 if is_cifar10 else 7
         s = 1 if is_cifar10 else 2
         p = 1 if is_cifar10 else 3
@@ -252,7 +254,7 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        if(self.maxpool):
+        if(self.use_maxpool):
             x = self.maxpool(x)
 
         x = self.layer1(x)
