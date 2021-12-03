@@ -4,6 +4,7 @@ python3 -m torch.distributed.run --nproc_per_node=1 train.py \
   --aug barlow \
   --batch-size 256 \
   --dim 128 \
+  --hid_dim 128 \
   --epochs 800 \
   --img_size 32 \
   --img_size_small 18 \
@@ -12,4 +13,6 @@ python3 -m torch.distributed.run --nproc_per_node=1 train.py \
   --min1 0.75 --max1 1.0 \
   --min2 0.3 --max2 0.74 \
   --lr 0.5 \
-  --lam2 0.0
+  --lam1 0.0 \
+  --lam2 1.0 \
+  --tau 0.1
