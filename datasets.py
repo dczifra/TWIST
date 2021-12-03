@@ -57,24 +57,24 @@ def get_train_with_val_augmentation(args, num_tasks, global_rank):
     val_aug = TestAugmentation(args).aug
 
     if args.dataset == "imagenet_lmdb":
-        dataset_val = ImageNetLMDB(args.data_path, 'val.lmdb', val_aug)
+        dataset_train = ImageNetLMDB(args.data_path, 'train.lmdb', val_aug)
     elif args.dataset == "imagenet":
-        dataset_val = ImageNet(args.data_path, val_aug, train=True)
+        dataset_train = ImageNet(args.data_path, val_aug, train=True)
     elif args.dataset == "cifar10":
-        dataset_val = CIFAR10(args.data_path, val_aug, train=True)
+        dataset_train = CIFAR10(args.data_path, val_aug, train=True)
 
-    sampler_val = torch.utils.data.DistributedSampler(
-        dataset_val, num_replicas=num_tasks, rank=global_rank, shuffle=False
+    sampler_train = torch.utils.data.DistributedSampler(
+        dataset_train, num_replicas=num_tasks, rank=global_rank, shuffle=False
     )
-    data_loader_val = torch.utils.data.DataLoader(
-        dataset_val, sampler=sampler_val,
+    data_loader_train = torch.utils.data.DataLoader(
+        dataset_train, sampler=sampler_train,
         batch_size=args.batch_size,
         num_workers=args.num_workers,
         pin_memory=args.pin_mem,
         drop_last=False,
         )
 
-    return data_loader_val
+    return data_loader_train
     
 def get_datasets(args, num_tasks, global_rank):
     dataset_train, dataset_val = None,None

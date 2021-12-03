@@ -14,10 +14,8 @@ class TWIST(nn.Module):
         if args.backbone.startswith('resnet'):
             if(args.dataset == "imagenet" or args.dataset == "imagenet_lmdb"):
                 widen_resnet.__dict__['resnet50'] = torchvision.models.resnet50
-                conv1_size=7
             elif(args.dataset == "cifar10"):
                 widen_resnet.__dict__['resnet18'] = torchvision.models.resnet18
-                conv1_size=5
             
             self.backbone = widen_resnet.__dict__[args.backbone]()
             self.feature_dim = self.backbone.fc.weight.shape[1]
@@ -28,7 +26,7 @@ class TWIST(nn.Module):
                         norm_layer= (partial(nn.LayerNorm, eps=1e-6)), 
                         drop_path_rate=args.drop_path,
                         freeze_embedding=args.freeze_embedding,
-                        conv1_size = conv1_size
+                        is_cifar10 = args.dataset == "cifar10",
                 )
                 self.feature_dim = self.backbone.embed_dim
         self.backbone.fc = nn.Identity()

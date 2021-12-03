@@ -17,6 +17,32 @@ def sharpen(p):
     sharp_p /= torch.sum(sharp_p, dim=1, keepdim=True)
     return sharp_p
 
+class PAWSLoss(nn.Module):
+    def __init__(self, args):
+        super(PAWSLoss, self).__init__()
+        self.args = args
+
+    def set_losses(self, probs1, probs2, loss):
+
+        loss['kl'] = 0.5 * (KL(probs1, probs2, self.args) + KL(probs2, probs1, self.args))
+
+        loss['eh'] = 0.5 * (EH(probs1, self.args) + EH(probs2, self.args))
+
+        # whether use historical data
+        loss['he'] = 0.5 * (HE(probs1, self.args) + HE(probs2, self.args))
+
+    def forward(self, feat1, feat2, use_queue=False):
+        loss = {}
+
+        probs1 = torch.nn.functional.softmax(feat1/self.args.tau, dim=-1)
+        probs2 = torch.nn.functional.softmax(feat2/self.args.tau, dim=-1)
+
+        probs2 = sharpen(probs2)
+
+        self.set_losses(probs1, probs2, loss)
+        loss['final'] = CE(probs2, probs1, self.args)
+        return loss
+
 class EntLoss(nn.Module):
     def __init__(self, args, lam1, lam2, pqueue=None):
         super(EntLoss, self).__init__()
@@ -51,6 +77,7 @@ def KL(probs1, probs2, args):
     return kl
 
 def CE(probs1, probs2, args):
+    #ce = - (((probs2 + args.EPS)**probs1).log()).sum(dim=1)
     ce = - (probs1 * (probs2 + args.EPS).log()).sum(dim=1)
     ce = ce.mean()
     torch.distributed.all_reduce(ce)

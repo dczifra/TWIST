@@ -54,6 +54,7 @@ def get_args_parser():
     parser.add_argument('--clip_norm', type=float, default=0.0)
     parser.add_argument('--EPS', type=float, default=1e-5, help='episillon')
     parser.add_argument('--reduce_mean', type=float, default=0)
+    parser.add_argument('--loss_type', type=str, default="ENTLoss")
 
     parser.add_argument('--eval_only', type=int, default=0)
     parser.add_argument('--inference_only', type=int, default=0)
@@ -263,7 +264,11 @@ def main(args):
     )
 
     # =================== Loss Function =================== 
-    criterion = EntLoss(args, args.lam1, args.lam2, pqueue=None)
+    if(args.loss_type == "ENTLoss"):
+        criterion = EntLoss(args, args.lam1, args.lam2, pqueue=None)
+    else:
+        criterion = PAWSLoss(args)
+    
     loss_scaler = torch.cuda.amp.GradScaler() if args.amp else None
 
     if utils.is_main_process(): # Tensorboard configuration

@@ -15,4 +15,5 @@ python3 -m torch.distributed.run --nproc_per_node=1 train.py \
   --lr 0.5 \
   --lam1 0.0 \
   --lam2 1.0 \
-  --tau 0.1
+  --tau 0.1 \
+  #--loss_type PAWSLoss
