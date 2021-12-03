@@ -11,13 +11,15 @@ import utils
 from sklearn.metrics.cluster import normalized_mutual_info_score
 from evaluate_cluster import evaluate as eval_pred
 from objective import KL, CE, HE, EH, ConfidenceBasedCE
-from datasets import ImageNet, ImageNetLMDB
+from datasets import ImageNet, ImageNetLMDB, get_train_with_val_augmentation
 from itertools import product
 import numpy as np
 import time
 from PIL import Image
 from torchvision import transforms
 import os
+
+from evaluate_embeddings import evaluate_embeddings
 
 def train_one_epoch(args, model, criterion, data_loader, optimizer, device, epoch, set_training_mode=True, scaler=None, logfn=None, wd_schedule=None, qt_schedule=None, teacher_model=None, momentum_schedule=None):
     model.train(set_training_mode)
@@ -199,6 +201,44 @@ def train_one_epoch(args, model, criterion, data_loader, optimizer, device, epoc
         end_time_evalcluster = time.time()
         print("calculating clustering indicators {}".format(end_time_evalcluster-start_time_evalcluster))
     return return_dic
+
+@torch.no_grad()
+def eval_knn(args, model, data_loader_val, device, epoch, num_tasks, global_rank):
+    is_encoder_training = model.training
+    model.eval()
+    # === Create embedding of test data ===
+    test_embs = []
+    test_labels = []
+
+    for itr, (imgs, real_labels, idxs) in enumerate(data_loader_val):
+        imgs = imgs.to(device)
+        with torch.no_grad():
+            z = model(imgs)
+            test_embs.append(z.to('cpu'))
+            test_labels.append(real_labels.to('cpu'))
+
+    test_embs = torch.cat(test_embs, 0)
+    test_labels = torch.cat(test_labels, 0)
+
+    # === Calculate knn and co. ===
+    # TODO: temp
+    num_classes = 10 if (args.dataset == "cifar10") else 1000
+
+    data_loader_train = get_train_with_val_augmentation(args, num_tasks, global_rank)
+    result = evaluate_embeddings(
+        device,
+        data_loader_train,
+        model,
+        prototypes = None,
+        labs = test_labels,
+        embs = test_embs,
+        num_classes = num_classes,
+        temp=args.tau
+    )
+    model.train(is_encoder_training)
+    return result
+
+    
 
 @torch.no_grad()
 def eval_one_epoch(args, model, data_loader, device, epoch=0, set_training_mode=False, scaler=None, logfn=None):

@@ -158,8 +158,19 @@ class ResNet(nn.Module):
         widen: int = 1,
         width_per_group: int = 64,
         replace_stride_with_dilation: Optional[List[bool]] = None,
-        norm_layer: Optional[Callable[..., nn.Module]] = None
+        norm_layer: Optional[Callable[..., nn.Module]] = None,
+        is_cifar10 = False,
     ) -> None:
+        if is_cifar10:
+            self.use_maxpool = False
+            print("WARNING: use_maxpool overrided to False due to cifar10")
+        else:
+            self.use_maxpool = True
+        
+        k = 3 if is_cifar10 else 7
+        s = 1 if is_cifar10 else 2
+        p = 1 if is_cifar10 else 3
+
         super(ResNet, self).__init__()
         if norm_layer is None:
             norm_layer = nn.BatchNorm2d
@@ -178,7 +189,7 @@ class ResNet(nn.Module):
         self.base_width = width_per_group
 
         num_out_filters = width_per_group * widen
-        self.conv1 = nn.Conv2d(3, num_out_filters, kernel_size=7, stride=2, padding=3,
+        self.conv1 = nn.Conv2d(3, num_out_filters, kernel_size=k, stride=s, padding=p,
                                bias=False)
         self.bn1 = norm_layer(num_out_filters)
         self.relu = nn.ReLU(inplace=True)
@@ -243,7 +254,8 @@ class ResNet(nn.Module):
         x = self.conv1(x)
         x = self.bn1(x)
         x = self.relu(x)
-        x = self.maxpool(x)
+        if(self.use_maxpool):
+            x = self.maxpool(x)
 
         x = self.layer1(x)
         x = self.layer2(x)

@@ -11,6 +11,38 @@ import torch.nn as nn
 import torch.distributed as dist
 #EPS = 1e-6
 
+def sharpen(p):
+    T = 0.25
+    sharp_p = p**(1./T)
+    sharp_p /= torch.sum(sharp_p, dim=1, keepdim=True)
+    return sharp_p
+
+class PAWSLoss(nn.Module):
+    def __init__(self, args):
+        super(PAWSLoss, self).__init__()
+        self.args = args
+
+    def set_losses(self, probs1, probs2, loss):
+
+        loss['kl'] = 0.5 * (KL(probs1, probs2, self.args) + KL(probs2, probs1, self.args))
+
+        loss['eh'] = 0.5 * (EH(probs1, self.args) + EH(probs2, self.args))
+
+        # whether use historical data
+        loss['he'] = 0.5 * (HE(probs1, self.args) + HE(probs2, self.args))
+
+    def forward(self, feat1, feat2, use_queue=False):
+        loss = {}
+
+        probs1 = torch.nn.functional.softmax(feat1/self.args.tau, dim=-1)
+        probs2 = torch.nn.functional.softmax(feat2/self.args.tau, dim=-1)
+
+        probs2 = sharpen(probs2)
+
+        self.set_losses(probs1, probs2, loss)
+        loss['final'] = CE(probs2, probs1, self.args)
+        return loss
+
 class EntLoss(nn.Module):
     def __init__(self, args, lam1, lam2, pqueue=None):
         super(EntLoss, self).__init__()
@@ -20,13 +52,16 @@ class EntLoss(nn.Module):
         self.args = args
     
     def forward(self, feat1, feat2, use_queue=False):
-        probs1 = torch.nn.functional.softmax(feat1, dim=-1)
-        probs2 = torch.nn.functional.softmax(feat2, dim=-1)
+        tau_kl = 1.0
+        probs1 = torch.nn.functional.softmax(feat1/tau_kl, dim=-1)
+        probs2 = torch.nn.functional.softmax(feat2/tau_kl, dim=-1)
+        #probs2 = sharpen(probs2)
         loss = dict()
         loss['kl'] = 0.5 * (KL(probs1, probs2, self.args) + KL(probs2, probs1, self.args))
 
         sharpened_probs1 = torch.nn.functional.softmax(feat1/self.args.tau, dim=-1)
         sharpened_probs2 = torch.nn.functional.softmax(feat2/self.args.tau, dim=-1)
+        #sharpened_probs2 = sharpen(sharpened_probs2)
         loss['eh'] = 0.5 * (EH(sharpened_probs1, self.args) + EH(sharpened_probs2, self.args))
 
         # whether use historical data
@@ -42,6 +77,7 @@ def KL(probs1, probs2, args):
     return kl
 
 def CE(probs1, probs2, args):
+    #ce = - (((probs2 + args.EPS)**probs1).log()).sum(dim=1)
     ce = - (probs1 * (probs2 + args.EPS).log()).sum(dim=1)
     ce = ce.mean()
     torch.distributed.all_reduce(ce)
